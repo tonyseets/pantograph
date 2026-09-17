@@ -1,0 +1,83 @@
+{
+  "title": "Design Parity Review",
+  "lead": "Three pages, one artifact. Pick a page above.",
+  "out": "review.html",
+
+  "defaults": {
+    "desktop": { "width": 1440, "sectionTag": "SECTION", "wholeWidth": 660, "wholeQuality": 76 },
+    "mobile": { "width": 390, "quality": 78 },
+    "quality": 85
+  },
+
+  "pages": [
+    {
+      "id": "home",
+      "label": "Home",
+      "lead": "Built from the Figma frame, rendered at <code>/preview/home</code>. Desktop copy verbatim.",
+      "pills": [
+        { "text": "lint + typecheck clean", "tone": "ok" },
+        { "text": "page 12016px vs Figma 12051px" },
+        { "text": "nav untouched", "tone": "warn" }
+      ],
+      "sectionNote": "Four sections have crisp Figma renders; the rest crop the whole-frame render. Heights are Figma → build.",
+      "mobileNote": "Desktop copy throughout. Cards scroll horizontally.",
+      "desktop": { "png": "home-1440.png", "rects": "home-1440.json" },
+      "mobile": { "chunks": "home-390x2-*.png" },
+      "figma": {
+        "frameWidth": 1440,
+        "wholeRender": "/abs/path/.figma/home/screenshots/desktop-12-345.png",
+        "sectionDir": "/abs/path/.figma/home/screenshots/sections",
+        "quality": 85
+      },
+      "sections": [
+        {
+          "id": "hero",
+          "name": "Hero",
+          "short": "Hero",
+          "status": "new",
+          "y": 0,
+          "h": 897,
+          "notes": [
+            "Copy sits inside the container; photo and blur bands stay full-bleed.",
+            "Primary button points nowhere yet (design note: signup flow not ready)."
+          ]
+        },
+        {
+          "id": "footer",
+          "name": "Footer",
+          "status": "existing + variant",
+          "y": 10857,
+          "h": 1194,
+          "rect": "footer",
+          "notes": ["New variant only; the existing footer is unchanged."]
+        }
+      ],
+      "findings": [
+        { "area": "Reuse", "state": "8 of 16 surfaces are existing components with a variant. 7 are new." },
+        { "area": "Not in scope", "state": "CMS wiring, navigation pass, real logos." }
+      ],
+      "questions": ["Pricing rows 04 and 05 carry the same label."],
+      "next": ["Nav pass against the states section."]
+    },
+
+    {
+      "id": "pricing",
+      "label": "Pricing",
+      "buildOnly": true,
+      "lead": "Live page checked against the Figma frame. No renders on disk, so each card shows the build alone.",
+      "pills": [{ "text": "11 of 11 sections mapped", "tone": "ok" }, { "text": "no Figma renders", "tone": "warn" }],
+      "desktop": { "png": "pricing-1440.png", "rects": "pricing-1440.json" },
+      "mobile": { "chunks": "pricing-390x2-*.png" },
+      "sections": [
+        {
+          "id": "hero",
+          "name": "Hero",
+          "status": "existing",
+          "h": 990,
+          "notes": ["174px shorter than the design frame; the difference is image area above the title."]
+        }
+      ],
+      "findings": [{ "area": "Copy", "state": "112 of 118 strings match." }]
+    }
+  ]
+}

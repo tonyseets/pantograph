@@ -1,0 +1,175 @@
+<title>{{TITLE}}</title>
+<style>
+/* Bare-bones review page. One column of text at a reading measure, images as wide as the
+   page allows, and nothing decorative. Light and dark follow the viewer's system. */
+:root{--bg:#fff;--ink:#17140f;--muted:rgba(23,20,15,.66);--faint:rgba(23,20,15,.45);--line:rgba(23,20,15,.14);--ok:#3f6212;--warn:#9a5522;--measure:64ch}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#121212;--ink:#f2f0ec;--muted:rgba(242,240,236,.7);--faint:rgba(242,240,236,.45);--line:rgba(242,240,236,.16);--ok:#9ccc65;--warn:#f0a868}}
+:root[data-theme="dark"]{--bg:#121212;--ink:#f2f0ec;--muted:rgba(242,240,236,.7);--faint:rgba(242,240,236,.45);--line:rgba(242,240,236,.16);--ok:#9ccc65;--warn:#f0a868}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:15px/1.55 ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;margin:0 auto;max-width:1100px;padding:8px 16px 48px}
+[hidden]{display:none !important}
+h1{font-size:24px;line-height:1.2;letter-spacing:-.02em;margin:20px 0 6px}
+h2{font-size:17px;margin:0}
+h3{font-size:15px;margin:36px 0 8px;padding-top:20px;border-top:1px solid var(--line)}
+/* Text never runs the full width of the page. */
+h1,h3,p,ul,.meta,.wrap{max-width:var(--measure)}
+p{margin:6px 0}
+.lead{color:var(--muted)}
+a{color:inherit}
+code{font-size:.92em}
+
+/* Status notes read as a plain line of text, separated by dots. */
+.meta{margin:8px 0 16px;color:var(--muted);font-size:13px}
+.pill + .pill::before{content:" · ";color:var(--faint)}
+.pill.ok{color:var(--ok)}
+.pill.warn{color:var(--warn)}
+.card header .pill{color:var(--muted);font-size:13px}
+
+.tabs,nav.toc{display:flex;flex-wrap:wrap;gap:4px 16px;margin:12px 0;font-size:14px}
+.tabs{position:sticky;top:0;z-index:2;background:var(--bg);padding:10px 0;border-bottom:1px solid var(--line)}
+.tab{font:inherit;padding:6px 0;border:0;border-bottom:2px solid transparent;background:none;color:var(--muted);cursor:pointer;min-height:36px}
+.tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--ink)}
+nav.toc a{color:var(--muted);text-underline-offset:3px}
+:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+
+/* A section is a heading, the pair of images and its notes. No box around it. */
+.card{margin:28px 0 0;padding-top:20px;border-top:1px solid var(--line)}
+.card header{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px;margin-bottom:10px}
+.dim{color:var(--faint);font-size:13px;font-variant-numeric:tabular-nums}
+.pair,.full{display:grid;grid-template-columns:1fr;gap:12px;align-items:start}
+@media (min-width:760px){.pair,.full{grid-template-columns:1fr 1fr}.pair.one,.full.one{grid-template-columns:1fr;max-width:720px}}
+figure{margin:0}
+figcaption{font-size:13px;color:var(--faint);margin-bottom:4px}
+img{display:block;width:100%;height:auto;border:1px solid var(--line);background:#fff;cursor:zoom-in}
+ul{margin:10px 0 0;padding-left:18px;color:var(--muted)}
+li{margin:4px 0}
+.mob{display:grid;grid-template-columns:1fr;gap:12px}
+@media (min-width:760px){.mob{grid-template-columns:repeat(3,1fr)}}
+.mob img{max-width:{{MOBILE_WIDTH}}px;margin:0 auto}
+table{border-collapse:collapse;width:100%;font-size:14px}
+td,th{text-align:left;vertical-align:top;padding:8px 12px 8px 0;border-bottom:1px solid var(--line)}
+th{font-weight:400;color:var(--faint);font-size:13px}
+.wrap{overflow-x:auto}
+
+/* Lightbox: tap an image to open it, then step through every image on the page. */
+.lb{position:fixed;inset:0;z-index:10;display:grid;grid-template-rows:auto 1fr;background:var(--bg)}
+.lb-bar{display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--line);font-size:13px;color:var(--muted)}
+.lb-bar span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lb-bar button{font:inherit;min-width:44px;min-height:44px;border:1px solid var(--line);border-radius:8px;background:none;color:var(--ink);cursor:pointer}
+.lb-view{overflow:auto;padding:12px;-webkit-overflow-scrolling:touch}
+.lb-view img{max-width:1440px;margin:0 auto;cursor:zoom-out}
+</style>
+<h1>{{TITLE}}</h1>
+<p class="lead">{{LEAD}}</p>
+{{TABS}}
+{{PAGES}}
+<script data-tabs>
+(function(){
+  var tabs=[].slice.call(document.querySelectorAll('[role="tab"]'));
+  if(!tabs.length)return;
+  var ids=tabs.map(function(t){return t.getAttribute('data-page')});
+  function show(id,remember){
+    tabs.forEach(function(t){
+      var on=t.getAttribute('data-page')===id;
+      t.setAttribute('aria-selected',on?'true':'false');
+      t.tabIndex=on?0:-1;
+      var panel=document.getElementById('page-'+t.getAttribute('data-page'));
+      if(panel)panel.hidden=!on;
+    });
+    if(remember){try{localStorage.setItem('reviewPage',id)}catch(e){}}
+  }
+  var want=(location.hash||'').slice(1);
+  if(ids.indexOf(want)<0&&want.indexOf('-')>0)want=want.slice(0,want.indexOf('-'));
+  if(ids.indexOf(want)<0){try{want=localStorage.getItem('reviewPage')||''}catch(e){want=''}}
+  if(ids.indexOf(want)<0)want=ids[0];
+  show(want,false);
+  tabs.forEach(function(t,i){
+    t.addEventListener('click',function(){
+      var id=t.getAttribute('data-page');
+      show(id,true);
+      if(history.replaceState)history.replaceState(null,'','#'+id);
+      window.scrollTo(0,0);
+    });
+    t.addEventListener('keydown',function(e){
+      var d=e.key==='ArrowRight'?1:e.key==='ArrowLeft'?-1:0;
+      if(!d)return;
+      e.preventDefault();
+      var n=tabs[(i+d+tabs.length)%tabs.length];
+      n.focus();n.click();
+    });
+  });
+  window.addEventListener('hashchange',function(){
+    var h=location.hash.slice(1);
+    if(ids.indexOf(h)<0&&h.indexOf('-')>0)h=h.slice(0,h.indexOf('-'));
+    if(ids.indexOf(h)>=0)show(h,true);
+  });
+})();
+</script>
+<script data-lightbox>
+(function(){
+  var imgs=[],at=0,box=null,view,label;
+  function visible(){return [].slice.call(document.querySelectorAll('img')).filter(function(i){return i.offsetParent&&!i.closest('.lb')})}
+  function name(i){
+    var cap=i.closest('figure');cap=cap&&cap.querySelector('figcaption');
+    var sec=i.closest('.card');sec=sec&&sec.querySelector('h2');
+    return [sec&&sec.textContent,cap?cap.textContent:i.alt].filter(Boolean).join(', ');
+  }
+  function show(n){
+    at=(n+imgs.length)%imgs.length;
+    view.innerHTML='';
+    var im=new Image();im.src=imgs[at].src;im.alt=imgs[at].alt;
+    im.addEventListener('click',close);
+    view.appendChild(im);view.scrollTop=0;
+    label.textContent=(at+1)+' of '+imgs.length+'  '+name(imgs[at]);
+  }
+  function close(){if(!box)return;box.remove();box=null;document.body.style.overflow='';imgs[at].focus&&imgs[at].scrollIntoView({block:'center'})}
+  function open(i){
+    imgs=visible();
+    box=document.createElement('div');box.className='lb';box.setAttribute('role','dialog');box.setAttribute('aria-modal','true');box.setAttribute('aria-label','Image viewer');
+    box.innerHTML='<div class="lb-bar"><button type="button" data-go="-1" aria-label="Previous image">&larr;</button><button type="button" data-go="1" aria-label="Next image">&rarr;</button><span></span><button type="button" data-go="0" aria-label="Close">&times;</button></div><div class="lb-view"></div>';
+    view=box.querySelector('.lb-view');label=box.querySelector('span');
+    box.addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;var d=+b.getAttribute('data-go');d?show(at+d):close()});
+    document.body.appendChild(box);document.body.style.overflow='hidden';
+    show(imgs.indexOf(i));box.querySelector('[data-go="1"]').focus();
+  }
+  document.addEventListener('click',function(e){var i=e.target.closest('img');if(i&&!i.closest('.lb'))open(i)});
+  document.addEventListener('keydown',function(e){
+    if(!box)return;
+    if(e.key==='Escape')close();
+    else if(e.key==='ArrowRight')show(at+1);
+    else if(e.key==='ArrowLeft')show(at-1);
+  });
+})();
+</script>
+
+<!--PAGE-->
+<p class="lead">{{LEAD}}</p>
+<div class="meta">{{PILLS}}</div>
+<nav class="toc">{{TOC}}</nav>
+
+<h3>Whole page, {{DESKTOP_WIDTH}}</h3>
+<div class="full{{FULL_MOD}}">{{WHOLE_PAIR}}</div>
+
+<h3>Section by section, {{DESKTOP_WIDTH}}</h3>
+<p class="lead">{{SECTION_NOTE}}</p>
+{{CARDS}}
+
+<h3 id="{{PREFIX}}mobile">Mobile, {{MOBILE_WIDTH}}</h3>
+<p class="lead">{{MOBILE_NOTE}}</p>
+<div class="mob">{{MOBILE_STRIP}}</div>
+
+<h3 id="{{PREFIX}}findings">Findings</h3>
+<div class="wrap"><table><tr><th>Area</th><th>State</th></tr>
+{{FINDINGS}}
+</table></div>
+
+<h3 id="{{PREFIX}}questions">Open questions</h3>
+<ul>
+{{QUESTIONS}}
+</ul>
+
+<h3 id="{{PREFIX}}next">Next</h3>
+<ul>
+{{NEXT}}
+</ul>
+<!--/PAGE-->

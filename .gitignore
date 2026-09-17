@@ -1,0 +1,5 @@
+node_modules/
+.figma/
+__pycache__/
+*.pyc
+.DS_Store
