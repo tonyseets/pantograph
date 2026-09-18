@@ -12,6 +12,8 @@ The second skill turns the result into a review page: the Figma frame beside the
 
 Anyone rebuilding a designed site from Figma with a coding agent, in any framework, with any CMS or none. The skills carry the method. Project specifics stay in the host repo.
 
+Pantograph grew up on marketing sites, mostly B2B, and that is where it has worked well. Other kinds of projects may need some massaging, and your mileage may vary.
+
 ## Prerequisites
 
 - **A Figma seat that can read the file.** Dev or Full on the plan that owns it. View seats get roughly six MCP reads a month, which is not enough for a page. Dev or Full on an Organization plan gets 200 reads a day, 20 a minute.
