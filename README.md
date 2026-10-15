@@ -2,11 +2,13 @@
 
 A pantograph copies a drawing by linkage, not by eye. This does the same for Figma pages: pulled once, distilled by script, built from disk, verified against the source.
 
-Two skills for a coding agent that turn a Figma board of designed pages into shipped web pages, without letting the agent guess at anything it could read.
+Skills for a coding agent that turn a Figma board of designed pages into shipped web pages, without letting the agent guess at anything it could read, and figpipe, a small CLI that watches Figma for handoffs and runs the agent on them.
 
 The method is deterministic. The agent pulls the design once into durable local files, distills copy and image slots out of them with a script instead of reading 200k characters by eye, builds from disk, and verifies with independent audits. Copy comes from the design's text nodes, dimensions from node attributes, icons from name and geometry matching. Screenshots are for orientation and QA, never for transcription.
 
 The second skill turns the result into a review page: the Figma frame beside the build, section by section, with the height deltas that show where they diverge. The page is mobile friendly, so the work can be checked at a desk or on the go.
+
+figpipe automates the hand-off: it watches a Figma file for sections marked ready for dev, named versions and comments, batches what changed once the designers go quiet, and runs one guarded agent session per batch. Each batch ends in a local report to review. Nothing is pushed, posted or written back to Figma.
 
 ## Who this is for
 
@@ -22,6 +24,7 @@ Pantograph grew up on marketing sites, mostly B2B, and that is where it has work
 - **sharp** (`npm i sharp`, next to Playwright) for the review page assembler. The distiller has no dependencies.
 - **curl**, for asset downloads.
 - **Somewhere to publish the review page**: a harness that can publish an Artifact, or any static host.
+- **For figpipe**: Node 22.5 or newer, a Figma personal access token on a Dev or Full seat, and Claude Code. No npm dependencies.
 
 ## Install
 
@@ -38,7 +41,7 @@ One command, from a clone of this repo:
 
 Symlinks by default, so a `git pull` here updates every harness at once. Pass `--copy` for independent copies, and `--uninstall` to remove the symlinks again (copies are left alone). An existing real directory at the destination is moved aside to `<name>.bak-<epoch>` first.
 
-For a harness the script does not know, copy `skills/figma-transpose` and `skills/figma-review-page` into wherever it reads skills from.
+For a harness the script does not know, copy the folders in `skills/` (`figma-transpose`, `figma-review-page`, `figma-batch`, `figma-setup`) into wherever it reads skills from.
 
 ## How to use
 
@@ -73,6 +76,8 @@ A few things that help:
 
 **Distillation.** A script walks the exported markup and emits a spec per page: designer annotations first, then every copy line in document order with its node id and type styles, then image slots with pixel dimensions, icons, and the design tokens each section uses. Conflicts between breakpoints, hidden layers and placeholder content become flagged questions instead of quiet decisions.
 
+**Component states.** A page frame shows each control in one state. Before building any control, the agent reads the component sets behind the frame's instances: every variant (hover, focus, checked, filled, error, disabled, open) and every prototype interaction between them, with its trigger, transition, duration and easing. Those are built as designed. A state the design does not have is proposed and asked about, never added silently. When two frames disagree on the same copy, the section's own spec frame wins, else the later frame, and the other wording is recorded.
+
 **Build.** One component per section, one content file per page, copy verbatim with every typo fix logged. Image slots render a labeled dashed placeholder until a real file exists at the path, so dropping in an export is the whole switch. The skill also lists what the Figma export silently flattens: progressive blurs that arrive as one flat value, full-bleed sections whose copy still belongs in the page container, dividers that are not really there.
 
 **Export and verify.** Images come out at true 2x where the file allows it, and the skill is explicit about what a view-only file can and cannot produce. Then the gates: independent agents diff the shipped copy against the raw pulls character by character, every asset is checked for the empty-file hash the Figma CDN sometimes returns, every image is checked against its slot ratio, every route is linted and screenshotted.
@@ -81,9 +86,18 @@ A few things that help:
 
 Read `skills/figma-transpose/SKILL.md` for the pipeline and `skills/figma-review-page/SKILL.md` for the review page.
 
+## figpipe
+
+Onboard a project by asking your agent to set it up with the `figma-setup` skill. It profiles the repo and your Figma access, asks only what it cannot infer (including when to check, proposed from when the designers actually work), and writes `~/.figpipe/projects/<slug>.toml`.
+
+After that, a background job runs `figpipe tick`. Sections that belong to other developers are left alone, judged from your rules and from who the comments tag. Each batch gets its own git worktree and a `claude -p` session that follows the `figma-batch` skill, under a guard that blocks pushes, posts, CMS writes and Figma writes. The report shows before and after captures at each review width, copy diffs, the decisions it took, and the questions for you or the designer. `figpipe status` says what is waiting and why; `figpipe ack <batch>` marks a batch reviewed.
+
+`figpipe report --sample` renders a made-up batch so you can see a report without a project. `figpipe/REFERENCE.md` has every command, the config and the rails.
+
 ## The scripts
 
 - `skills/figma-transpose/scripts/distill.mjs` — parses a raw design-context pull into a per-section spec, in Markdown and JSON.
+- `skills/figma-transpose/scripts/figma-read.mjs` — read-only Figma REST: metadata, versions, ready-for-dev nodes, node pulls, verbatim copy, renders, comment threads, and the component sets behind a frame.
 - `skills/figma-transpose/scripts/fetch-asset.sh` — downloads one Figma asset URL with a browser user agent, names it by content hash, refuses empty bodies.
 - `skills/figma-review-page/scripts/sections.mjs` — full-page desktop capture plus the bounding box of every section.
 - `skills/figma-review-page/scripts/shot.mjs` — plain full-page capture at any viewport.
