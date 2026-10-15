@@ -1,0 +1,87 @@
+{
+  "$comment": "What a figma-batch session returns (claude -p --json-schema). figpipe record stores it and renders the report from it. Paths are relative to the batch folder or absolute.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["summary", "items", "not_done", "checks"],
+  "properties": {
+    "summary": { "type": "string", "description": "One line for the notification and the report header: what was built and what needs Tony." },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["item_id", "outcome", "change_kind", "verdict"],
+        "properties": {
+          "item_id": { "type": "integer", "description": "items[].id from batch.json" },
+          "outcome": { "type": "string", "enum": ["applied", "already_done", "question", "needs_you", "fyi", "failed", "skipped"] },
+          "change_kind": { "type": "string", "enum": ["copy", "redesign", "new_page", "fix", "motion", "none"], "description": "copy shows a text diff in the report; redesign and new_page show before/after captures at every width" },
+          "verdict": { "type": "string", "description": "One plain-English line: what happened. No hedging, no novel." },
+          "branch": { "type": "string" },
+          "commits": { "type": "array", "items": { "type": "string" } },
+          "worktree": { "type": "string" },
+          "preview": {
+            "type": "array",
+            "items": { "type": "object", "additionalProperties": false, "required": ["label", "url"], "properties": { "label": { "type": "string" }, "url": { "type": "string" } } }
+          },
+          "captures": {
+            "type": "array",
+            "description": "One row per width. before is the page before this batch (omit for new pages), after is the build, figma is the design render at the same width.",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["width"],
+              "properties": {
+                "width": { "type": "integer", "minimum": 200 },
+                "label": { "type": "string" },
+                "before": { "type": "string" },
+                "after": { "type": "string" },
+                "figma": { "type": "string" }
+              }
+            }
+          },
+          "text_diff": {
+            "type": "array",
+            "description": "For copy changes: each changed string, verbatim.",
+            "items": { "type": "object", "additionalProperties": false, "required": ["before", "after"], "properties": { "before": { "type": "string" }, "after": { "type": "string" }, "where": { "type": "string" } } }
+          },
+          "decisions": {
+            "type": "array",
+            "description": "Choices made without the designer, each with the default already applied.",
+            "items": { "type": "object", "additionalProperties": false, "required": ["text", "default_applied"], "properties": { "text": { "type": "string" }, "default_applied": { "type": "string" } } }
+          },
+          "questions": {
+            "type": "array",
+            "description": "Questions for the designer, written ready to paste. States the build proposed are asked by figpipe from components; do not repeat them here.",
+            "items": { "type": "object", "additionalProperties": false, "required": ["text"], "properties": { "text": { "type": "string" }, "section": { "type": "string" }, "layer": { "type": "string" } } }
+          },
+          "flags": { "type": "array", "description": "Looks unconsidered: missing empty or loading states, copy that differs across breakpoints, mobile quirks, motion without reduced-motion. A missing hover, focus, checked, error, disabled or open state goes under components, not here.", "items": { "type": "string" } },
+          "components": {
+            "type": "array",
+            "description": "Where the states of each interactive element came from. One row per element; a second row for the states that came from somewhere else. figpipe writes the report's Components line from these rows, and turns every row with another source than figma_component into a question asking whether those proposed states are wanted.",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["element", "source"],
+              "properties": {
+                "element": { "type": "string", "description": "The element in plain words: Checkbox, Phone list." },
+                "states": { "type": "string", "description": "The states this row covers, when it is not all of them: open, or hover and focus." },
+                "source": { "type": "string", "enum": ["figma_component", "figma_elsewhere", "project", "platform_default"], "description": "figma_component: the variants of its component set, with their interactions. figma_elsewhere: the same element shown in that state elsewhere in the file. project: the project's existing component or tokens. platform_default: the platform's usual states for that kind of element, for a project with nothing to follow." },
+                "used": { "type": "string", "description": "For every source but figma_component, what was used, in plain words: the site's existing dropdown." }
+              }
+            }
+          },
+          "reply": { "type": "string", "description": "For comment items: a reply Tony can paste into the thread. Never posted." }
+        }
+      }
+    },
+    "not_done": {
+      "type": "array",
+      "items": { "type": "object", "additionalProperties": false, "required": ["text"], "properties": { "item_id": { "type": "integer" }, "text": { "type": "string" }, "command": { "type": "string" }, "patch": { "type": "string" } } }
+    },
+    "checks": {
+      "type": "array",
+      "items": { "type": "object", "additionalProperties": false, "required": ["name", "status"], "properties": { "name": { "type": "string" }, "status": { "type": "string", "enum": ["pass", "fail", "skip"] }, "detail": { "type": "string" } } }
+    },
+    "mcp_calls": { "type": "integer", "minimum": 0 }
+  }
+}

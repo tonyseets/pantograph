@@ -1,5 +1,5 @@
 #!/bin/sh
-# Pantograph: install the figma-transpose and figma-review-page skills into a coding harness.
+# Pantograph: install the Figma skills (figma-transpose, figma-review-page, figma-batch, figma-setup) into a coding harness.
 #
 #   ./install.sh [--harness claude|codex|cursor|grok|project|all] [--copy] [--target DIR] [--uninstall]
 #
@@ -8,7 +8,7 @@
 set -eu
 
 REPO=$(cd "$(dirname "$0")" && pwd)
-SKILLS="figma-transpose figma-review-page"
+SKILLS="figma-transpose figma-review-page figma-batch figma-setup"
 
 harness=claude
 mode=symlink
@@ -33,7 +33,7 @@ usage: install.sh [--harness claude|codex|cursor|grok|project|all] [--copy] [--t
   --target DIR        project root for --harness project
   --uninstall         remove symlinks this script created (copies are left alone)
 
-Skills live in skills/ and keep their own names: figma-transpose, figma-review-page.
+Skills live in skills/ and keep their own names: figma-transpose, figma-review-page, figma-batch, figma-setup.
 USAGE
 }
 

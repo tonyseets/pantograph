@@ -1,0 +1,139 @@
+# figpipe project config: ~/.figpipe/projects/<slug>.toml
+# Kept outside the client repo. Secrets are references (file:, keychain:, op:, env:), never values.
+# Every setting below shows its default unless marked "required". Unknown keys are refused.
+schema = 1
+
+[project]
+slug = "acme"                           # required; must match the file name
+name = "Acme website"                   # report and notification title; default: the slug in words
+repo = "~/Projects/acme-site"           # required
+autonomy = "build"                      # notify | notes | build
+notes = "~/.figpipe/projects/acme.notes.md"   # prose rules the config can't express
+max_unreviewed_batches = 1              # no new batch while this many wait for review; 0 = no limit
+
+[figma]
+pat_ref = "file:~/.config/figma/pat"
+me = { user_id = "", handle = "you", names = ["Your Name"] }   # user_id from GET /v1/me
+rest_tier = ""                          # high (Dev/Full seat) | low (View/Collab) | "" unknown
+mcp = { daily_cap = 200, pipeline_share = 120, reserve_for_motion = 20 }
+backoff = { default_s = 30, max_s = 120 }
+
+[[figma.files]]
+key = "AbCdEfGhIjKlMnOpQrStUv"            # required: the live file
+name = "Acme Website"
+stale_copies = []                       # same-name copies: watched for drift, never built from
+pages = ["Development Ready"]           # required: page names or node ids
+ready_depth = 2                         # how deep under each page devStatus marks sit
+breakpoints = { desktop = 1440, tablet = 1024, mobile = 390 }
+canonical_copy = "desktop"
+component_pages = []                    # pages that hold the component sets; empty: pages named like Components, Library, Design system
+
+# Sections still in progress (not marked ready) that you have pre-built. figpipe keeps the build in
+# step: a design change, a comment from someone else, or a ready mark starts a batch that updates it
+# on figma/<lane>, started from `branch`. Read by node id from any page; one entry per section.
+# [[figma.files.watch]]
+# node = "7431:81099"                   # required: the section's node id (Copy link in Figma)
+# name = "Locations"                    # required: also the lane name ("locations")
+# branch = "feat/site-refresh"          # required: the local branch that holds the pre-built page
+# route = "/preview/locations"          # where the page is previewed
+# page = "Design In Progress"           # where it lives, to find it again if its id changes
+# built = true                          # false: not built yet; the first real design is a new page
+# lane = ""                             # share another section's lane (and branch), e.g. a variant frame
+# notes = ""                            # for the session: a spec path, what the variant is for
+
+[scope]                                 # whose handoffs these are; see REFERENCE.md "Scope and ownership"
+include = []                            # name globs (case-insensitive, on a ready node and its section names) for sections that are yours
+exclude = []                            # sections that are someone else's, e.g. ["*Funnel*", "*Checkout*"]; wins over include
+others = []                             # people whose @mentions mark a section or thread as theirs, e.g. ["Ada Brooks", "Arlo"]
+unknown = "mine"                        # a section with no signal: "mine" builds it, "ask" holds it until `figpipe own <name> mine|others`
+tracker = ""                            # where the assign table came from (a note; never fetched)
+# [scope.assign]                        # section pattern = implementer, from a tracker with an implementer column
+# "Booking*" = "Galina"
+
+[triggers]
+ready_for_dev = true
+mentions = true
+my_threads = true                       # replies in threads you started, were mentioned in, or replied to
+named_versions = "close_batch"          # ignore | close_batch | trigger
+changed_after_build = true              # a built node still marked ready that changes again
+deep_check_minutes = 60
+
+[schedule]                              # when checks run; absent = every batching.poll_minutes, all day
+mode = ""                               # "follow" = check when the designers work (derived from their activity); "" = times, windows or poll_minutes
+timezone = ""                           # IANA name of the designers' zone, e.g. "Europe/Berlin"; empty = this Mac's zone (follow: guessed from activity)
+days = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]   # follow: narrows the days the designers work
+times = []                              # fixed checks, e.g. ["06:00", "14:00", "22:00"]
+windows = []                            # or: [{ start = "08:00", end = "19:00", every = 60 }]; times and windows are exclusive
+# follow mode only:
+every = 60                              # minutes between checks inside the designers' working blocks
+my_day_starts = "08:00"                 # one check lands 60-90 minutes before this, so a build can finish
+my_timezone = ""                        # your zone for my_day_starts; empty = this Mac's zone
+refresh_days = 7                        # re-derive the blocks this often (never more than once a day)
+# A check missed while the Mac slept runs once on wake. Times are wall-clock in `timezone`, so
+# daylight saving changes move nothing by hand.
+
+[batching]
+poll_minutes = 10                       # used when [schedule] has no times or windows
+quiet_minutes = 20
+max_wait_minutes = 120
+max_items = 10
+min_gap_minutes = 0
+active_hours = ""                       # e.g. "08:00-22:00"; empty = always
+
+[git]
+base_branch = "main"
+branch_pattern = "figma/{page}"
+worktree_pattern = "{repo}-fp-{page}"
+stack_on_feature_branch = true
+feature_branches = {}                   # e.g. { pricing = "feat/pricing" }
+extract_dir = ".figma"
+worktree_files = []                     # ignored files a new worktree needs to run, e.g. [".env"]; copied from the repo
+worktree_env_omit = ["*SECRET*", "*ACCESS_TOKEN*", "*PRIVATE*", "*PASSWORD*", "*MANAGEMENT*"]   # dotenv keys never copied
+figma_dir_hidden_by = "info/exclude"    # info/exclude | tracked
+
+[stack]
+framework = "nuxt"
+package_manager = "npm"
+dev = "npx nuxt dev --port {port}"      # required in build mode
+port_base = 3011
+preview_route = "/preview/{page}"
+preview_pages = {}                      # lanes whose page has another name, e.g. { "timeline-v2" = "how-it-works" }
+gates = ["npm run lint", "npm run typecheck"]
+tokens = "design value wins; log deviations"
+cms = { kind = "", unattended = "none" }   # none | drafts
+allowed_bash = ["npm *", "npx *"]
+install = ""                            # dependency install figpipe runs for a new lane worktree; "" = frozen install, scripts off
+allowed_domains = []                    # hosts the dev server may read inside the sandbox, besides the CMS read API
+
+[review]
+widths = [1440, 1024, 390]
+extra_widths = []
+regression_routes = ["/"]
+shared_paths = ["components/ui/**"]
+lenses = ["parity", "responsive", "a11y", "regressions"]
+max_fix_rounds = 1
+
+[extract]
+render_scale = 2
+max_renders_per_item = 24
+component_sets = true                   # read the component sets behind each node (every variant and state)
+component_render_scale = 3
+max_component_sets = 30                 # per node; sets with states are read first
+
+[models]                                # opus | sonnet, optionally :effort; Haiku and Fable are refused
+coordinator = "opus:medium"
+coordinator_when_ahead_of_pace = "sonnet:medium"
+build = "sonnet:medium"
+build_hard = "sonnet:high"
+review = "opus:medium"
+
+[limits]
+usd_per_batch = 15                      # across every attempt of a batch, retries included
+usd_per_day = 45                        # no batch starts once today's spend reaches this
+batches_per_day = 4
+max_minutes = 90
+pace_with_usage_meter = true
+
+[report]
+notify = "terminal-notifier"            # terminal-notifier | osascript | none
+publish = "never"                       # never | artifact

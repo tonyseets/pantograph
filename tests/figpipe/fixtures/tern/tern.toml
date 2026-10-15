@@ -1,0 +1,63 @@
+# The test project, with the probed values (ready marks sit at depth 1-2).
+schema = 1
+
+[project]
+slug = "tern"
+repo = "__REPO__"
+autonomy = "build"
+max_unreviewed_batches = 1
+
+[figma]
+pat_ref = "env:FIGPIPE_TEST_TOKEN"
+me = { user_id = "1671667321998733279", handle = "tony", names = ["Tony"] }
+rest_tier = "high"
+mcp = { daily_cap = 200, pipeline_share = 120, reserve_for_motion = 20 }
+backoff = { default_s = 30, max_s = 120 }
+
+[[figma.files]]
+key = "Tn7LiveDemoKey0q2Wx4Yz"
+name = "Tern Website Review"
+stale_copies = ["Tn7OldDemoKey8r3Vu5Ka1"]
+pages = ["Development Ready (Latest)"]
+ready_depth = 2
+breakpoints = { desktop = 1440, tablet = 1024, mobile = 390 }
+canonical_copy = "desktop"
+
+[triggers]
+named_versions = "close_batch"
+
+[batching]
+quiet_minutes = 20
+max_wait_minutes = 120
+max_items = 10
+
+[git]
+base_branch = "main"
+branch_pattern = "figma/{page}"
+worktree_pattern = "{repo}-fp-{page}"
+feature_branches = { how-it-works = "feat/how-it-works" }
+
+[stack]
+framework = "nuxt"
+package_manager = "npm"
+dev = "npx nuxt dev --port {port}"
+port_base = 3011
+preview_route = "/en-gb/preview/{page}"
+gates = ["npm run lint:quiet", "npm run typecheck"]
+cms = { kind = "storyblok", unattended = "none" }
+allowed_bash = ["npm *", "npx *", "node *", "python3 *"]
+
+[review]
+widths = [1440, 1024, 390]
+extra_widths = [1920]
+regression_routes = ["/en-gb", "/en-gb/how-it-works"]
+shared_paths = ["components/ui/**"]
+
+[limits]
+usd_per_batch = 15
+batches_per_day = 4
+max_minutes = 90
+pace_with_usage_meter = false
+
+[report]
+notify = "none"
