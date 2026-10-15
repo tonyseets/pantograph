@@ -8,7 +8,7 @@ The method is deterministic. The agent pulls the design once into durable local 
 
 The second skill turns the result into a review page: the Figma frame beside the build, section by section, with the height deltas that show where they diverge. The page is mobile friendly, so the work can be checked at a desk or on the go.
 
-figpipe automates the hand-off: it watches a Figma file for sections marked ready for dev, named versions and comments, batches what changed once the designers go quiet, and runs one guarded agent session per batch. Each batch ends in a local report to review. Nothing is pushed, posted or written back to Figma.
+figpipe automates the hand-off: it watches a Figma file for sections marked ready for dev, named versions and comments, batches what changed once the designers go quiet, and runs one guarded agent session per batch. Each batch ends in a local report to review. Nothing is pushed, posted or written back to Figma. figpipe is optional; the skills work on their own in any agent.
 
 ## Who this is for
 
@@ -90,7 +90,9 @@ Read `skills/figma-transpose/SKILL.md` for the pipeline and `skills/figma-review
 
 Onboard a project by asking your agent to set it up with the `figma-setup` skill. It profiles the repo and your Figma access, asks only what it cannot infer (including when to check, proposed from when the designers actually work), and writes `~/.figpipe/projects/<slug>.toml`.
 
-After that, a background job runs `figpipe tick`. Sections that belong to other developers are left alone, judged from your rules and from who the comments tag. Each batch gets its own git worktree and a `claude -p` session that follows the `figma-batch` skill, under a guard that blocks pushes, posts, CMS writes and Figma writes. The report shows before and after captures at each review width, copy diffs, the decisions it took, and the questions for you or the designer. `figpipe status` says what is waiting and why; `figpipe ack <batch>` marks a batch reviewed.
+figpipe is not a daemon. A macOS LaunchAgent wakes `figpipe tick` every 15 minutes; each run checks which projects are due under their schedule, starts a batch if one is ready, and exits. `figpipe launchd install` writes the LaunchAgent and prints the `launchctl` commands for you to run.
+
+Sections that belong to other developers are left alone, judged from your rules and from who the comments tag. Each batch gets its own git worktree and a `claude -p` session that follows the `figma-batch` skill, under a guard that blocks pushes, posts, CMS writes and Figma writes. The report shows before and after captures at each review width, copy diffs, the decisions it took, and the questions for you or the designer. `figpipe status` says what is waiting and why; `figpipe ack <batch>` marks a batch reviewed.
 
 `figpipe report --sample` renders a made-up batch so you can see a report without a project. `figpipe/REFERENCE.md` has every command, the config and the rails.
 
