@@ -23,7 +23,7 @@ Principles:
 
 - **Height deltas are the finding.** `868px → 869px` says parity; `768px → 800px` says look here. Put them in every card header.
 - **A note earns its place by naming a decision.** What was rebuilt, what is a placeholder, what the design says that the build deliberately ignores. Never narrate the obvious.
-- **Every unresolved conflict becomes an open question, never a silent choice.** Breakpoint copy that disagrees, duplicated labels, placeholder addresses, assets that do not match the design.
+- **Every unresolved conflict becomes an open question, never a silent choice.** Breakpoint copy that disagrees, duplicated labels, placeholder addresses, assets that do not match the design. A conflict settled by the spec-frame-or-later rule is listed with the wording that was not used.
 - **One artifact per review, not one per page.** Several pages go behind tabs so the reviewer has a single link.
 - **Publish once.** The page is a deliverable, not a draft to iterate on in front of the reviewer.
 

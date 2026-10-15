@@ -15,7 +15,8 @@ A pipeline for turning a Figma board of designed pages into shipped pages with 1
 - **Deterministic over visual.** Copy comes from extracted text nodes, dimensions from node attributes, icons from name+geometry matching. Screenshots are for orientation and QA only. Never hand-draw an SVG, never transcribe copy from pixels.
 - **Distill with a script, not by reading.** Parse the returned markup mechanically. Eyeballing 200k chars is how copy drifts.
 - **Placeholders are first-class.** Every image slot renders a labeled placeholder (dashed box showing its expected file name + aspect ratio) until a file exists at that path. Dropping the export in is the entire switch — no call-site edits.
-- **Surface designer questions, never resolve them silently.** Conflicting copy across breakpoints, `data-annotations`, hidden layers: each becomes a flagged question in the spec.
+- **States come from component sets.** A page frame shows each control in one state. Hover, focus, checked, filled, error, disabled and open, and the interactions between them, are in the component sets behind its instances; read those before building any control and build them as designed (Phase 1c). A state with no design is proposed and asked about, never added silently.
+- **Surface designer questions, never resolve them silently.** Conflicting copy across breakpoints, `data-annotations`, hidden layers: each becomes a flagged question in the spec. Two frames that disagree on the same copy (a page frame and a section's own spec frame, or two generations of one frame): build the spec frame, else the later one (version history shows when a node appeared; node ids grow within a session), and record the other wording as a question without waiting on it.
 - **Verify with fresh eyes.** After transcription, spawn independent agents to diff the shipped content against the RAW pulls character-by-character. They audit the fix log too. This catches real bugs (swapped card bodies, silent apostrophe swaps).
 
 ## Phase 0 — Access diagnosis (do this first; it is cheap and it gates everything)
@@ -28,6 +29,18 @@ Three routes exist and fail for different reasons:
 When access fails, run `whoami` before anything else — it lists every plan and seat. OAuth binds silently to whichever Figma account the browser is logged into, so "access denied" is usually the wrong account, not a missing grant. Confirm the email matches the account that was invited, then check its seat on the file's org.
 
 Rate limits: Dev/Full seat on an Organization plan = 200 reads/day, 20/min. View seats get 6/month. Budget calls before spending them.
+
+## REST read tools (ship with this skill)
+
+With a PAT on a Dev or Full seat, REST carries node trees, copy, renders and comments without spending the MCP's daily calls. `node scripts/figma-read.mjs <command>` (read-only, 429 backoff with `Retry-After`, default 30 s, capped at 120 s; token from `FIGMA_TOKEN_REF`, default `file:~/.config/figma/pat`):
+
+- `meta`, `identity <key> <other-key>...` (which same-name file was edited last), `versions`
+- `ready <key> <page-id>` (nodes marked ready for dev), `nodes <key> <ids> --out f.json`
+- `tree <f.json> [id]`, `copy <f.json> [id]` (verbatim, JSON-quoted), `sdiff <old.json> <new.json>` (structural diff)
+- `render <key> <ids> <dir>` (2x PNGs), `comments <key> [--node id]` (whole threads)
+- `components <key> <node-id> <dir>` (the component sets behind a frame and their prototype interactions, Phase 1c), `find <f.json> <text>` (nodes by name or text in a pull on disk)
+
+REST gives each variant's prototype interactions (trigger, destination state, transition, duration, easing). MCP stays the only route to motion beyond that (`get_motion_context`, `export_video`), variables on non-Enterprise plans, and the JSX export below. Read motion from those, not from stills.
 
 ## Phase 1 — Extraction (Figma MCP)
 
@@ -58,6 +71,22 @@ Scripts ship with this skill: `node scripts/distill.mjs <breakpoint> <raw.full.t
 - The set of `var(--token)` names used.
 
 That output is `spec.md` per page: a verbatim semantic outline plus layout notes, repeated-template observations, and explicit flags for placeholder content ("XXX" testimonials), empty frames, hidden sections, breakpoint copy conflicts, and source typos.
+
+## Phase 1c — Component states (before any control is built)
+
+A frame shows a checkbox unchecked, a field empty, a dropdown closed. Building the other states from what the site already does is how a checked box ships as a solid fill when the design has a tick. The states are designed in the component sets the frame's instances come from, on another page of the file or in a library.
+
+`node scripts/figma-read.mjs components <file-key> <frame-id> .figma/<page>/components [--from <frame pull>.json] [--pages "Components"]` walks the frame's instances, resolves each to its component set, and writes:
+
+- `components.md`: one row per set with its variant axes, the variants on the page, and the variants not on the page (the states still to build). Then the interactions, one line each: "Default -> Hovered on hover, smart animate 200 ms ease-out", and any the frame's instances carry that differ from their variant's.
+- `<set>/set.json`: every variant, with its lines (`lines`), what it changes against the resting variant (`changes`, `from`), where it sits in the render (`box`) and its prototype interactions (`interactions`: trigger, destination variant `to` or `outside_set`, transition, `duration_ms`, easing with `bezier` or `spring` values when custom). `<set>/node.json` is the verbatim node, `<set>/render@3x.png` the whole set.
+- A second table, "No component: states not designed": plain layers named like a control, a part of an instance switched on by a property, a component without variants, text styled as a link. Each with the sets in the file named like it; those sets are read too.
+
+Sets are cached per file version, so shared components are read once across pages. Without REST access, pull each set node with `get_design_context` and `get_screenshot` instead; the rule below is the same.
+
+Build rule: every interactive element is built from its set's full variant list, state by state, with values read from set.json, and each interaction as designed: the trigger, the state it changes to, the transition, its duration and easing. A hover that only grows a photo inside its clip is still a hover to build. Designed states and interactions are built without asking.
+
+When an interactive element has no design for a state (no set, a set without that state, a detached copy, a library the token cannot read), propose the states it should have, from the first source that has them: (1) the same element in that state elsewhere in the file (`find` on a pull, other looks on the frame), (2) the project's existing component or tokens, (3) on a project with nothing to follow, the platform's usual states for that kind of element. In an interactive session, ask the user once, in one message that lists each element with its proposed states and their source, before building those states; build the designed ones meanwhile. Unattended, nobody can answer: build the proposal and record it as a question for the user. Write the source of each element's states in `spec.md`, with each proposed state as "state not designed: <element> <state>" and what was used. A file without component sets is ordinary and stops nothing.
 
 ## Phase 2 — Build (components + content files)
 
@@ -135,6 +164,7 @@ Snapshot the CMS side into `.figma/<page>/cms/` via its read/delivery API with a
 - Pages: lint + typecheck + smoke every route; screenshot the tricky regions yourself (headless browser) and compare against the user's Figma screenshots rather than asking them to re-check your math.
 - Full-bleed: every edge-to-edge section re-checked at 1920 — copy still inside the container, art still bleeding.
 - Interaction: every accordion, tab and carousel control exercised once; nothing dead.
+- States: every built control put into each state its set has (Playwright `hover()`, `focus()`, `check()`, `fill()`, a click to open), captured at 3x and compared with the set's `render@3x.png`. Each designed interaction is checked too: its trigger reaches the state it names, the transition runs with the designed duration and easing (the computed `transition` in the browser), and under `prefers-reduced-motion: reduce` the state still changes without the animation.
 - Forms: focus into each field and confirm no layout shift.
 - Blur bands: read as ramps, not as a hard edge at the band boundary.
 - Comments: density audited across the diff before review.
