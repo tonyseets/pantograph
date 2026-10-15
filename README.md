@@ -24,7 +24,9 @@ Pantograph grew up on marketing sites, mostly B2B, and that is where it has work
 - **sharp** (`npm i sharp`, next to Playwright) for the review page assembler. The distiller has no dependencies.
 - **curl**, for asset downloads.
 - **Somewhere to publish the review page**: a harness that can publish an Artifact, or any static host.
-- **For figpipe**: Node 22.5 or newer, a Figma personal access token on a Dev or Full seat, and Claude Code. No npm dependencies.
+- **For figpipe**: a Mac, Node 22.5 or newer, a Figma personal access token on a Dev or Full seat, and Claude Code. It runs from a macOS LaunchAgent. No npm dependencies.
+
+Tested so far with Claude Code on macOS only. The other harnesses install the same skill files, but they have not been run there yet.
 
 ## Install
 
